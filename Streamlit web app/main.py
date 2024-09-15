@@ -7,13 +7,31 @@ import cv2
 from ultralytics import YOLO
 from detection import create_colors_info, detect
 
-
-
 def main():
+    st.set_page_config(page_title="Athlex AI", layout="wide", initial_sidebar_state="expanded")
+    st.title("AthleX AI")
+    st.subheader("For Coaches, By AI")
 
-    st.set_page_config(page_title="AI Powered Web Application for Football Tactical Analysis", layout="wide", initial_sidebar_state="expanded")
-    st.title("Football Players Detection With Team Prediction & Tactical Map")
-    st.subheader(":red[Works only with Tactical Camera footage]")
+    # Inject custom CSS for immediate styling changes
+    st.markdown("""
+        <style>
+        .css-18e3th9 {
+            background-color: #1E2530;
+        }
+        .css-1cpxqw2 {
+            background-color: #FBFCFA;
+        }
+        .css-1v0mbdj {
+            background-color: #F5FD15;
+        }
+        .css-ffj4iq {
+            color: #1E2530;
+        }
+        .css-1r2w8wa {
+            color: #FBFCFA;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
     st.sidebar.title("Main Settings")
     demo_selected = st.sidebar.radio(label="Select Demo Video", options=["Demo 1", "Demo 2"], horizontal=True)
@@ -71,34 +89,12 @@ def main():
 
     st.sidebar.markdown('---')
     st.sidebar.subheader("Team Names")
-    team1_name = st.sidebar.text_input(label='First Team Name', value=selected_team_info["team1_name"])
-    team2_name = st.sidebar.text_input(label='Second Team Name', value=selected_team_info["team2_name"])
+    team1_name = st.sidebar.text_input(label='Team 1', value=selected_team_info["team1_name"])
+    team2_name = st.sidebar.text_input(label='Team 2', value=selected_team_info["team2_name"])
     st.sidebar.markdown('---')
 
     ## Page Setup
-    tab1, tab2, tab3 = st.tabs(["How to use?", "Team Colors", "Model Hyperparameters & Detection"])
-    with tab1:
-        st.header(':blue[Welcome!]')
-        st.subheader('Main Application Functionalities:', divider='blue')
-        st.markdown("""
-                    1. Football players, referee, and ball detection.
-                    2. Players team prediction.
-                    3. Estimation of players and ball positions on a tactical map.
-                    4. Ball Tracking.
-                    """)
-        st.subheader('How to use?', divider='blue')
-        st.markdown("""
-                    **There are two demo videos that are automaticaly loaded when you start the app, alongside the recommended settings and hyperparameters**
-                    1. Upload a video to analyse, using the sidebar menu "Browse files" button.
-                    2. Enter the team names that corresponds to the uploaded video in the text fields in the sidebar menu.
-                    3. Access the "Team colors" tab in the main page.
-                    4. Select a frame where players and goal keepers from both teams can be detected.
-                    5. Follow the instruction on the page to pick each team colors.
-                    6. Go to the "Model Hyperpramerters & Detection" tab, adjust hyperparameters and select the annotation options. (Default hyperparameters are recommended)
-                    7. Run Detection!
-                    8. If "save outputs" option was selected the saved video can be found in the "outputs" directory
-                    """)
-        st.write("Version 0.0.1")
+    tab2, tab3 = st.tabs(["Team Colors", "Analyze your team"])
 
     with tab2:
         t1col1, t1col2 = st.columns([1,1])
@@ -131,7 +127,6 @@ def main():
                 concat_det_imgs = cv2.vconcat([concat_det_imgs_row1,concat_det_imgs_row2])
             st.write("Detected players")
             value = streamlit_image_coordinates(concat_det_imgs, key="numpy")
-            #value_radio_dic = defaultdict(lambda: None)
             st.markdown('---')
             radio_options =[f"{team1_name} P color", f"{team1_name} GK color",f"{team2_name} P color", f"{team2_name} GK color"]
             active_color = st.radio(label="Select which team color to pick from the image above", options=radio_options, horizontal=True,
@@ -159,27 +154,21 @@ def main():
                 st.session_state[f"{team2_name} GK color"] = team2_gk_color
         st.markdown('---')
 
-
-        
-            
-
         with t1col2:
             extracted_frame = st.empty()
             extracted_frame.image(frame, use_column_width=True, channels="BGR")
 
-        
     colors_dic, color_list_lab = create_colors_info(team1_name, st.session_state[f"{team1_name} P color"], st.session_state[f"{team1_name} GK color"],
                                                      team2_name, st.session_state[f"{team2_name} P color"], st.session_state[f"{team2_name} GK color"])
-
 
     with tab3:
         t2col1, t2col2 = st.columns([1,1])
         with t2col1:
-            player_model_conf_thresh = st.slider('PLayers Detection Confidence Threshold', min_value=0.0, max_value=1.0, value=0.6)
-            keypoints_model_conf_thresh = st.slider('Field Keypoints PLayers Detection Confidence Threshold', min_value=0.0, max_value=1.0, value=0.7)
+            player_model_conf_thresh = st.slider('Players Detection Confidence Threshold', min_value=0.0, max_value=1.0, value=0.6)
+            keypoints_model_conf_thresh = st.slider('Field Keypoints Players Detection Confidence Threshold', min_value=0.0, max_value=1.0, value=0.7)
             keypoints_displacement_mean_tol = st.slider('Keypoints Displacement RMSE Tolerance (pixels)', min_value=-1, max_value=100, value=7,
                                                          help="Indicates the maximum allowed average distance between the position of the field keypoints\
-                                                           in current and previous detections. It is used to determine wether to update homography matrix or not. ")
+                                                           in current and previous detections. It is used to determine whether to update homography matrix or not. ")
             detection_hyper_params = {
                 0: player_model_conf_thresh,
                 1: keypoints_model_conf_thresh,
@@ -187,7 +176,7 @@ def main():
             }
         with t2col2:
             num_pal_colors = st.slider(label="Number of palette colors", min_value=1, max_value=5, step=1, value=3,
-                                    help="How many colors to extract form detected players bounding-boxes? It is used for team prediction.")
+                                    help="How many colors to extract from detected players' bounding-boxes? It is used for team prediction.")
             st.markdown("---")
             save_output = st.checkbox(label='Save output', value=False)
             if save_output:
@@ -196,13 +185,12 @@ def main():
                 output_file_name = None
         st.markdown("---")
 
-        
         bcol1, bcol2 = st.columns([1,1])
         with bcol1:
             nbr_frames_no_ball_thresh = st.number_input("Ball track reset threshold (frames)", min_value=1, max_value=10000,
                                                      value=30, help="After how many frames with no ball detection, should the track be reset?")
             ball_track_dist_thresh = st.number_input("Ball track distance threshold (pixels)", min_value=1, max_value=1280,
-                                                        value=100, help="Maximum allowed distance between two consecutive balls detection to keep the current track.")
+                                                        value=100, help="Maximum allowed distance between two consecutive ball detections to keep the current track.")
             max_track_length = st.number_input("Maximum ball track length (Nbr. detections)", min_value=1, max_value=1000,
                                                         value=35, help="Maximum total number of ball detections to keep in tracking history")
             ball_track_hyperparams = {
@@ -238,7 +226,6 @@ def main():
             with bcol24:
                 st.write('')
 
-
     stframe = st.empty()
     cap = cv2.VideoCapture(tempf.name)
     status = False
@@ -257,7 +244,6 @@ def main():
     if status:
         st.toast(f'Detection Completed!')
         cap.release()
-
 
 if __name__=='__main__':
     try:
